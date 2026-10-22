@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta name="referrer" content="no-referrer">
+  <meta name="theme-color" content="#1E6B57" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0F1D1A" media="(prefers-color-scheme: dark)">
+  <meta name="description" content="Sustituto de la tarjeta de coordenadas, cifrado con tu PIN y sin conexión.">
+  <title>Tarjeta de coordenadas</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main id="app">
+
+    <!-- Cargando -->
+    <section id="s-loading" class="screen screen--center" data-active>
+      <p class="muted">Cargando…</p>
+    </section>
+
+    <!-- Bienvenida (sin datos guardados) -->
+    <section id="s-welcome" class="screen screen--center" hidden>
+      <div class="hero-grid" aria-hidden="true"></div>
+      <h1 class="title">Tarjeta de coordenadas</h1>
+      <p class="lead">Introduce una vez los valores de tu tarjeta. Se guardan cifrados con tu PIN y solo en este móvil.</p>
+      <div class="stack">
+        <button class="btn btn--primary" id="welcome-setup">Introducir mi tarjeta</button>
+        <button class="btn" id="welcome-import">Restaurar copia de seguridad</button>
+        <button class="btn btn--quiet" id="welcome-install" hidden>Instalar en el móvil</button>
+      </div>
+    </section>
+
+    <!-- Datos borrados tras demasiados intentos -->
+    <section id="s-wiped" class="screen screen--center" hidden>
+      <h1 class="title">Tarjeta borrada</h1>
+      <p class="lead" id="wiped-text">Se ha introducido un PIN incorrecto 5 veces seguidas, así que la tarjeta se ha borrado de este móvil.</p>
+      <div class="stack">
+        <button class="btn btn--primary" id="wiped-import">Restaurar copia de seguridad</button>
+        <button class="btn" id="wiped-setup">Introducir la tarjeta de nuevo</button>
+      </div>
+    </section>
+
+    <!-- Introducción fila a fila -->
+    <section id="s-entry" class="screen" hidden>
+      <header class="bar">
+        <button class="btn btn--quiet btn--small" id="entry-cancel">Cancelar</button>
+        <span class="bar__title" id="entry-progress">Fila 1 de 10</span>
+        <span class="bar__spacer"></span>
+      </header>
+      <div class="entry">
+        <div class="entry__row-letter" id="entry-letter" aria-hidden="true">A</div>
+        <p class="lead">Escribe los 10 valores de la fila <strong id="entry-letter-text">A</strong>, de la columna 1 a la 10. Cada casilla lleva 2 dígitos.</p>
+        <div class="entry__cells" id="entry-cells"></div>
+        <p class="msg msg--error" id="entry-error" role="alert"></p>
+        <div class="row-actions">
+          <button class="btn" id="entry-prev">Fila anterior</button>
+          <button class="btn btn--primary" id="entry-next">Siguiente fila</button>
+        </div>
+        <ol class="rows-progress" id="rows-progress" aria-hidden="true"></ol>
+      </div>
+    </section>
+
+    <!-- Revisión / edición de la matriz completa -->
+    <section id="s-review" class="screen" hidden>
+      <header class="bar">
+        <button class="btn btn--quiet btn--small" id="review-back">Volver</button>
+        <span class="bar__title" id="review-title">Revisa tu tarjeta</span>
+        <span class="bar__spacer"></span>
+      </header>
+      <p class="lead lead--tight" id="review-lead">Compara cada casilla con tu tarjeta. Toca una para corregirla.</p>
+      <div class="matrix-wrap">
+        <table class="matrix" id="review-matrix"></table>
+      </div>
+      <p class="msg msg--error" id="review-error" role="alert"></p>
+      <div class="row-actions row-actions--sticky">
+        <button class="btn btn--primary btn--wide" id="review-save">Guardar y crear PIN</button>
+      </div>
+    </section>
+
+    <!-- Teclado de PIN (desbloqueo, creación, cambio, restauración) -->
+    <section id="s-pin" class="screen screen--pin" hidden>
+      <header class="bar">
+        <button class="btn btn--quiet btn--small" id="pin-cancel" hidden>Cancelar</button>
+        <span class="bar__spacer"></span>
+      </header>
+      <div class="pin">
+        <h1 class="pin__title" id="pin-title">Introduce tu PIN</h1>
+        <p class="pin__sub muted" id="pin-sub"></p>
+        <div class="pin__dots" id="pin-dots" aria-hidden="true">
+          <span></span><span></span><span></span><span></span><span></span><span></span>
+        </div>
+        <p class="msg msg--error pin__msg" id="pin-msg" role="alert"></p>
+        <div class="keypad" id="keypad">
+          <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button>
+          <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button>
+          <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button>
+          <span></span><button data-k="0">0</button><button data-k="del" aria-label="Borrar" class="keypad__del">⌫</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Consulta de coordenadas -->
+    <section id="s-main" class="screen" hidden>
+      <header class="bar">
+        <button class="btn btn--quiet btn--small" id="main-lock">Bloquear</button>
+        <span class="bar__spacer"></span>
+        <button class="btn btn--quiet btn--small" id="main-menu">Menú</button>
+      </header>
+      <form class="query" id="query-form" autocomplete="off" novalidate>
+        <label for="coord" class="query__label">Coordenada</label>
+        <div class="query__row">
+          <input id="coord" name="coord" type="text" inputmode="text" maxlength="4"
+                 autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false"
+                 enterkeyhint="go" placeholder="C7" aria-describedby="query-error">
+          <button class="btn btn--primary" type="submit">Ver</button>
+        </div>
+        <p class="msg msg--error" id="query-error" role="alert"></p>
+      </form>
+
+      <div class="result" id="result" hidden aria-live="polite">
+        <div class="result__head">
+          <span class="result__coord" id="result-coord">C7</span>
+        </div>
+        <div class="result__value" id="result-value">00</div>
+        <div class="minigrid" id="minigrid" aria-hidden="true"></div>
+      </div>
+      <div class="empty" id="empty">
+        <p class="muted">Escribe la coordenada que te pide el banco, por ejemplo <strong>C7</strong>, y pulsa Ver.</p>
+      </div>
+
+      <footer class="countdown" id="countdown" aria-live="off">Se bloquea en 3:00 sin actividad</footer>
+    </section>
+
+    <!-- Menú -->
+    <section id="s-menu" class="screen" hidden>
+      <header class="bar">
+        <button class="btn btn--quiet btn--small" id="menu-back">Volver</button>
+        <span class="bar__title">Menú</span>
+        <span class="bar__spacer"></span>
+      </header>
+      <ul class="menu">
+        <li><button id="m-edit"><span>Ver o corregir la tarjeta</span><small>Muestra todos los valores</small></button></li>
+        <li><button id="m-pin"><span>Cambiar PIN</span><small>Vuelve a cifrar la tarjeta con el PIN nuevo</small></button></li>
+        <li><button id="m-export"><span>Exportar copia de seguridad</span><small>Archivo cifrado con tu PIN actual</small></button></li>
+        <li><button id="m-import"><span>Restaurar copia de seguridad</span><small>Sustituye la tarjeta de este móvil</small></button></li>
+        <li><button id="m-install" hidden><span>Instalar en el móvil</span><small>Añade la app a la pantalla de inicio</small></button></li>
+        <li><button id="m-wipe" class="menu__danger"><span>Borrar todos los datos</span><small>Elimina la tarjeta de este móvil</small></button></li>
+      </ul>
+      <p class="muted small menu__foot">Versión 1. Funciona sin conexión.</p>
+    </section>
+
+  </main>
+
+  <input type="file" id="file-import" accept=".json,application/json" hidden>
+
+  <dialog id="dlg">
+    <form method="dialog" class="dlg">
+      <h2 id="dlg-title"></h2>
+      <p id="dlg-text"></p>
+      <div class="dlg__actions">
+        <button value="cancel" class="btn" id="dlg-cancel">Cancelar</button>
+        <button value="ok" class="btn btn--primary" id="dlg-ok">Aceptar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

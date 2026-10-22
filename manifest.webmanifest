@@ -1,0 +1,18 @@
+{
+  "name": "Tarjeta de coordenadas",
+  "short_name": "Coordenadas",
+  "description": "Sustituto de la tarjeta de coordenadas, cifrado con tu PIN y sin conexión.",
+  "lang": "es",
+  "start_url": "./",
+  "scope": "./",
+  "id": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#E6EAE8",
+  "theme_color": "#1E6B57",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
